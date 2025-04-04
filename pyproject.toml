@@ -1,0 +1,13 @@
+[project]
+name = "jama-mcp-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp[cli]>=1.6.0",
+    "py-jama-rest-client",
+]
+
+[tool.uv.sources]
+py-jama-rest-client = { git = "https://github.com/jamasoftware-ps/py-jama-rest-client.git" }
