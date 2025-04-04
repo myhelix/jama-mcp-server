@@ -46,144 +46,74 @@ async def main():
 
                 # 1. Test Connection Tool
                 logger.info("Calling tool: test_jama_connection")
-                try:
-                    result = await session.call_tool("test_jama_connection")
-                    logger.info(f"Result (test_jama_connection): {result}")
-                    test_results["test_connection"] = result
-                except Exception as e:
-                    logger.error(f"Error calling test_jama_connection: {e}", exc_info=True)
-                    test_results["test_connection"] = {"error": str(e)}
+                # Helper function to run tool and store result/error
+                async def run_test(test_name, tool_name, arguments=None):
+                    logger.info(f"Calling tool: {tool_name} with args: {arguments}")
+                    try:
+                        result = await session.call_tool(tool_name, arguments=arguments)
+                        logger.info(f"Result ({test_name}): {result}")
+                        test_results[test_name] = result # Store the full result object
+                    except Exception as e:
+                        # This catch might be redundant if session.call_tool handles all MCP errors
+                        # but good for catching unexpected client-side issues.
+                        logger.error(f"Exception during call for {test_name}: {e}", exc_info=True)
+                        # Create a mock error result if exception occurs before getting MCP response
+                        test_results[test_name] = types.CallToolResult(content=[types.TextContent(text=f"Client-side exception: {str(e)}")], isError=True)
+
+                # 1. Test Connection Tool
+                await run_test("test_connection", "test_jama_connection")
 
                 # 2. Get Projects Tool
-                logger.info("Calling tool: get_jama_projects")
-                try:
-                    result = await session.call_tool("get_jama_projects")
-                    logger.info(f"Result (get_jama_projects): {result}")
-                    test_results["get_projects"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_projects: {e}", exc_info=True)
-                    test_results["get_projects"] = {"error": str(e)}
+                await run_test("get_projects", "get_jama_projects")
 
                 # 3. Get Item Tool (Existing Mock ID)
-                logger.info("Calling tool: get_jama_item (item_id=123)")
-                try:
-                    result = await session.call_tool("get_jama_item", arguments={"item_id": "123"}) # Pass ID as string
-                    logger.info(f"Result (get_jama_item, id=123): {result}")
-                    test_results["get_item_123"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_item(123): {e}", exc_info=True)
-                    test_results["get_item_123"] = {"error": str(e)}
+                await run_test("get_item_123", "get_jama_item", arguments={"item_id": "123"})
 
-                # 4. Get Item Tool (Non-Existing Mock ID)
-                logger.info("Calling tool: get_jama_item (item_id=999)")
-                try:
-                    result = await session.call_tool("get_jama_item", arguments={"item_id": "999"}) # Pass ID as string
-                    logger.info(f"Result (get_jama_item, id=999): {result}")
-                    test_results["get_item_999"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_item(999): {e}", exc_info=True)
-                    test_results["get_item_999"] = {"error": str(e)}
+                # 4. Get Item Tool (Non-Existing Mock ID - Expecting error/empty from server)
+                await run_test("get_item_999", "get_jama_item", arguments={"item_id": "999"})
 
                 # 5. Get Project Items Tool (Existing Mock Project ID 1)
-                logger.info("Calling tool: get_jama_project_items (project_id=1)")
-                try:
-                    result = await session.call_tool("get_jama_project_items", arguments={"project_id": "1"}) # Pass ID as string
-                    logger.info(f"Result (get_jama_project_items, project_id=1): {result}")
-                    test_results["get_project_items_1"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_project_items(1): {e}", exc_info=True)
-                    test_results["get_project_items_1"] = {"error": str(e)}
+                await run_test("get_project_items_1", "get_jama_project_items", arguments={"project_id": "1"})
 
                 # 6. Get Project Items Tool (Non-Existing Mock Project ID 99)
-                logger.info("Calling tool: get_jama_project_items (project_id=99)")
-                try:
-                    result = await session.call_tool("get_jama_project_items", arguments={"project_id": "99"}) # Pass ID as string
-                    logger.info(f"Result (get_jama_project_items, project_id=99): {result}")
-                    test_results["get_project_items_99"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_project_items(99): {e}", exc_info=True)
-                    test_results["get_project_items_99"] = {"error": str(e)}
+                await run_test("get_project_items_99", "get_jama_project_items", arguments={"project_id": "99"})
 
                 # 7. Get Item Children (Parent ID 123)
-                logger.info("Calling tool: get_jama_item_children (item_id=123)")
-                try:
-                    result = await session.call_tool("get_jama_item_children", arguments={"item_id": "123"})
-                    logger.info(f"Result (get_jama_item_children, id=123): {result}")
-                    test_results["get_item_children_123"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_item_children(123): {e}", exc_info=True)
-                    test_results["get_item_children_123"] = {"error": str(e)}
+                await run_test("get_item_children_123", "get_jama_item_children", arguments={"item_id": "123"})
 
                 # 8. Get Item Children (Parent ID 999)
-                logger.info("Calling tool: get_jama_item_children (item_id=999)")
-                try:
-                    result = await session.call_tool("get_jama_item_children", arguments={"item_id": "999"})
-                    logger.info(f"Result (get_jama_item_children, id=999): {result}")
-                    test_results["get_item_children_999"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_item_children(999): {e}", exc_info=True)
-                    test_results["get_item_children_999"] = {"error": str(e)}
+                await run_test("get_item_children_999", "get_jama_item_children", arguments={"item_id": "999"})
 
                 # 9. Get Relationships (Project ID 1)
-                logger.info("Calling tool: get_jama_relationships (project_id=1)")
-                try:
-                    result = await session.call_tool("get_jama_relationships", arguments={"project_id": "1"})
-                    logger.info(f"Result (get_jama_relationships, project_id=1): {result}")
-                    test_results["get_relationships_1"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_relationships(1): {e}", exc_info=True)
-                    test_results["get_relationships_1"] = {"error": str(e)}
+                await run_test("get_relationships_1", "get_jama_relationships", arguments={"project_id": "1"})
 
                 # 10. Get Relationship (ID 101)
-                logger.info("Calling tool: get_jama_relationship (relationship_id=101)")
-                try:
-                    result = await session.call_tool("get_jama_relationship", arguments={"relationship_id": "101"})
-                    logger.info(f"Result (get_jama_relationship, id=101): {result}")
-                    test_results["get_relationship_101"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_relationship(101): {e}", exc_info=True)
-                    test_results["get_relationship_101"] = {"error": str(e)}
+                await run_test("get_relationship_101", "get_jama_relationship", arguments={"relationship_id": "101"})
 
                 # Add more tests for other tools as needed...
                 # e.g., get_jama_item_upstream_relationships, get_jama_item_types, etc.
                 # Remember to use appropriate mock IDs defined in mock_client.py
 
                 # Example: Get Item Types
-                logger.info("Calling tool: get_jama_item_types")
-                try:
-                    result = await session.call_tool("get_jama_item_types")
-                    logger.info(f"Result (get_jama_item_types): {result}")
-                    test_results["get_item_types"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_item_types: {e}", exc_info=True)
-                    test_results["get_item_types"] = {"error": str(e)}
+                await run_test("get_item_types", "get_jama_item_types")
 
                 # Example: Get Tags for Project 1
-                logger.info("Calling tool: get_jama_tags (project_id=1)")
-                try:
-                    result = await session.call_tool("get_jama_tags", arguments={"project_id": "1"})
-                    logger.info(f"Result (get_jama_tags, project_id=1): {result}")
-                    test_results["get_tags_1"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_tags(1): {e}", exc_info=True)
-                    test_results["get_tags_1"] = {"error": str(e)}
+                await run_test("get_tags_1", "get_jama_tags", arguments={"project_id": "1"})
 
                 # Example: Get Test Runs for Cycle 501
-                logger.info("Calling tool: get_jama_test_runs (test_cycle_id=501)")
-                try:
-                    result = await session.call_tool("get_jama_test_runs", arguments={"test_cycle_id": "501"})
-                    logger.info(f"Result (get_jama_test_runs, cycle=501): {result}")
-                    test_results["get_test_runs_501"] = result
-                except Exception as e:
-                    logger.error(f"Error calling get_jama_test_runs(501): {e}", exc_info=True)
-                    test_results["get_test_runs_501"] = {"error": str(e)}
+                await run_test("get_test_runs_501", "get_jama_test_runs", arguments={"test_cycle_id": "501"})
 
 
                 # --- Print Summary ---
                 print("\n--- Test Summary ---")
-                for test_name, result_data in test_results.items():
-                    status = "PASS" if "error" not in result_data else "FAIL"
-                    print(f"{test_name}: {status} - {result_data}")
+                # Check results based on isError attribute
+                for test_name, result_obj in test_results.items():
+                    status = "FAIL" if result_obj.isError else "PASS"
+                    # Extract text content for printing, handle potential errors/multiple parts
+                    content_str = ""
+                    if result_obj.content:
+                        content_str = " | ".join([c.text for c in result_obj.content if isinstance(c, types.TextContent)])
+                    print(f"{test_name}: {status} - isError={result_obj.isError}, content='{content_str}'")
                 print("--------------------\n")
 
             logger.info("ClientSession closed.")

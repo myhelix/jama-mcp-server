@@ -102,19 +102,19 @@ mcp = FastMCP(
 async def get_jama_projects(ctx: Context) -> list[dict]:
     """
     Retrieves a list of projects from Jama Connect.
+
+    Returns:
+        A list of dictionaries representing projects.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info("Executing get_jama_projects tool")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        # The py_jama_rest_client's get_projects method handles pagination internally
-        projects = jama_client.get_projects()
-        logger.info(f"Retrieved {len(projects)} projects.")
-        # Ensure the return type is suitable for MCP (usually list of dicts)
-        return projects
-    except Exception as e:
-        logger.error(f"Error in get_jama_projects tool: {e}", exc_info=True)
-        # Return a dictionary indicating the error, as tools should return results
-        return {"error": f"Failed to retrieve Jama projects: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    # Let exceptions from the client propagate
+    projects = jama_client.get_projects()
+    logger.info(f"Retrieved {len(projects)} projects.")
+    return projects
 
 @mcp.tool()
 async def get_jama_item(item_id: str, ctx: Context) -> dict:
@@ -123,18 +123,21 @@ async def get_jama_item(item_id: str, ctx: Context) -> dict:
 
     Args:
         item_id: The ID (as a string) of the Jama item to retrieve.
+
+    Returns:
+        A dictionary representing the item.
+
+    Raises:
+        APIException: If the item is not found or an error occurs.
     """
     logger.info(f"Executing get_jama_item tool for item_id: {item_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        item = jama_client.get_item(item_id)
-        logger.info(f"Retrieved item {item_id}.")
-        if not item:
-             return {"error": f"Item with ID {item_id} not found."}
-        return item
-    except Exception as e:
-        logger.error(f"Error in get_jama_item tool for item_id {item_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve Jama item {item_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    item = jama_client.get_item(item_id)
+    # Let the client raise ResourceNotFoundException if applicable
+    if not item and MOCK_MODE: # Handle mock case explicitly if needed
+        raise ValueError(f"Mock Item with ID {item_id} not found.")
+    logger.info(f"Retrieved item {item_id}.")
+    return item
 
 @mcp.tool()
 async def get_jama_project_items(project_id: str, ctx: Context) -> list[dict]:
@@ -143,21 +146,18 @@ async def get_jama_project_items(project_id: str, ctx: Context) -> list[dict]:
 
     Args:
         project_id: The ID (as a string) of the Jama project.
+
+    Returns:
+        A list of dictionaries representing items in the project.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_project_items tool for project_id: {project_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        # The py_jama_rest_client's get_items method handles pagination internally when called with project ID
-        # The underlying client handles string conversion if needed, pass the string directly.
-        # The get_items method expects project_id as a keyword argument.
-        items = jama_client.get_items(project_id=project_id)
-        logger.info(f"Retrieved {len(items)} items for project {project_id}.")
-        # Return items, or an empty list if none found/error in client (client might return empty list on 404)
-        return items if items else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_project_items tool for project_id {project_id}: {e}", exc_info=True)
-        # Return error dict for tool failures
-        return {"error": f"Failed to retrieve items for Jama project {project_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    items = jama_client.get_items(project_id=project_id)
+    logger.info(f"Retrieved {len(items)} items for project {project_id}.")
+    return items if items else []
 
 @mcp.tool()
 async def get_jama_item_children(item_id: str, ctx: Context) -> list[dict]:
@@ -166,16 +166,18 @@ async def get_jama_item_children(item_id: str, ctx: Context) -> list[dict]:
 
     Args:
         item_id: The ID (as a string) of the parent Jama item.
+
+    Returns:
+        A list of dictionaries representing child items.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_item_children tool for parent_id: {item_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        children = jama_client.get_item_children(item_id=item_id)
-        logger.info(f"Retrieved {len(children)} child items for parent {item_id}.")
-        return children if children else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_item_children tool for parent_id {item_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve children for Jama item {item_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    children = jama_client.get_item_children(item_id=item_id)
+    logger.info(f"Retrieved {len(children)} child items for parent {item_id}.")
+    return children if children else []
 
 @mcp.tool()
 async def get_jama_relationships(project_id: str, ctx: Context) -> list[dict]:
@@ -184,16 +186,18 @@ async def get_jama_relationships(project_id: str, ctx: Context) -> list[dict]:
 
     Args:
         project_id: The ID (as a string) of the Jama project.
+
+    Returns:
+        A list of dictionaries representing relationships.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_relationships tool for project_id: {project_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        relationships = jama_client.get_relationships(project_id=project_id)
-        logger.info(f"Retrieved {len(relationships)} relationships for project {project_id}.")
-        return relationships if relationships else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_relationships tool for project_id {project_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve relationships for Jama project {project_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    relationships = jama_client.get_relationships(project_id=project_id)
+    logger.info(f"Retrieved {len(relationships)} relationships for project {project_id}.")
+    return relationships if relationships else []
 
 @mcp.tool()
 async def get_jama_relationship(relationship_id: str, ctx: Context) -> dict:
@@ -202,18 +206,21 @@ async def get_jama_relationship(relationship_id: str, ctx: Context) -> dict:
 
     Args:
         relationship_id: The ID (as a string) of the relationship.
+
+    Returns:
+        A dictionary representing the relationship.
+
+    Raises:
+        APIException: If the relationship is not found or an error occurs.
     """
     logger.info(f"Executing get_jama_relationship tool for relationship_id: {relationship_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        relationship = jama_client.get_relationship(relationship_id=relationship_id)
-        if not relationship:
-            return {"error": f"Relationship with ID {relationship_id} not found."}
-        logger.info(f"Retrieved relationship {relationship_id}.")
-        return relationship
-    except Exception as e:
-        logger.error(f"Error in get_jama_relationship tool for relationship_id {relationship_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve relationship {relationship_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    relationship = jama_client.get_relationship(relationship_id=relationship_id)
+    # Let py-jama-rest-client raise ResourceNotFoundException if applicable
+    if not relationship and MOCK_MODE: # Handle mock case explicitly if needed
+         raise ValueError(f"Mock Relationship with ID {relationship_id} not found.")
+    logger.info(f"Retrieved relationship {relationship_id}.")
+    return relationship
 
 @mcp.tool()
 async def get_jama_item_upstream_relationships(item_id: str, ctx: Context) -> list[dict]:
@@ -222,16 +229,18 @@ async def get_jama_item_upstream_relationships(item_id: str, ctx: Context) -> li
 
     Args:
         item_id: The ID (as a string) of the Jama item.
+
+    Returns:
+        A list of dictionaries representing upstream relationships.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_item_upstream_relationships tool for item_id: {item_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        relationships = jama_client.get_items_upstream_relationships(item_id=item_id)
-        logger.info(f"Retrieved {len(relationships)} upstream relationships for item {item_id}.")
-        return relationships if relationships else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_item_upstream_relationships tool for item {item_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve upstream relationships for item {item_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    relationships = jama_client.get_items_upstream_relationships(item_id=item_id)
+    logger.info(f"Retrieved {len(relationships)} upstream relationships for item {item_id}.")
+    return relationships if relationships else []
 
 @mcp.tool()
 async def get_jama_item_downstream_relationships(item_id: str, ctx: Context) -> list[dict]:
@@ -240,16 +249,18 @@ async def get_jama_item_downstream_relationships(item_id: str, ctx: Context) -> 
 
     Args:
         item_id: The ID (as a string) of the Jama item.
+
+    Returns:
+        A list of dictionaries representing downstream relationships.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_item_downstream_relationships tool for item_id: {item_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        relationships = jama_client.get_items_downstream_relationships(item_id=item_id)
-        logger.info(f"Retrieved {len(relationships)} downstream relationships for item {item_id}.")
-        return relationships if relationships else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_item_downstream_relationships tool for item {item_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve downstream relationships for item {item_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    relationships = jama_client.get_items_downstream_relationships(item_id=item_id)
+    logger.info(f"Retrieved {len(relationships)} downstream relationships for item {item_id}.")
+    return relationships if relationships else []
 
 @mcp.tool()
 async def get_jama_item_upstream_related(item_id: str, ctx: Context) -> list[dict]:
@@ -258,16 +269,18 @@ async def get_jama_item_upstream_related(item_id: str, ctx: Context) -> list[dic
 
     Args:
         item_id: The ID (as a string) of the Jama item.
+
+    Returns:
+        A list of dictionaries representing upstream related items.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_item_upstream_related tool for item_id: {item_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        items = jama_client.get_items_upstream_related(item_id=item_id)
-        logger.info(f"Retrieved {len(items)} upstream related items for item {item_id}.")
-        return items if items else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_item_upstream_related tool for item {item_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve upstream related items for item {item_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    items = jama_client.get_items_upstream_related(item_id=item_id)
+    logger.info(f"Retrieved {len(items)} upstream related items for item {item_id}.")
+    return items if items else []
 
 @mcp.tool()
 async def get_jama_item_downstream_related(item_id: str, ctx: Context) -> list[dict]:
@@ -276,29 +289,35 @@ async def get_jama_item_downstream_related(item_id: str, ctx: Context) -> list[d
 
     Args:
         item_id: The ID (as a string) of the Jama item.
+
+    Returns:
+        A list of dictionaries representing downstream related items.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_item_downstream_related tool for item_id: {item_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        items = jama_client.get_items_downstream_related(item_id=item_id)
-        logger.info(f"Retrieved {len(items)} downstream related items for item {item_id}.")
-        return items if items else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_item_downstream_related tool for item {item_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve downstream related items for item {item_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    items = jama_client.get_items_downstream_related(item_id=item_id)
+    logger.info(f"Retrieved {len(items)} downstream related items for item {item_id}.")
+    return items if items else []
 
 @mcp.tool()
 async def get_jama_item_types(ctx: Context) -> list[dict]:
-    """Retrieves all item types from Jama Connect."""
+    """
+    Retrieves all item types from Jama Connect.
+
+    Returns:
+        A list of dictionaries representing item types.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
+    """
     logger.info("Executing get_jama_item_types tool")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        item_types = jama_client.get_item_types()
-        logger.info(f"Retrieved {len(item_types)} item types.")
-        return item_types if item_types else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_item_types tool: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve item types: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    item_types = jama_client.get_item_types()
+    logger.info(f"Retrieved {len(item_types)} item types.")
+    return item_types if item_types else []
 
 @mcp.tool()
 async def get_jama_item_type(item_type_id: str, ctx: Context) -> dict:
@@ -307,31 +326,37 @@ async def get_jama_item_type(item_type_id: str, ctx: Context) -> dict:
 
     Args:
         item_type_id: The ID (as a string) of the item type.
+
+    Returns:
+        A dictionary representing the item type.
+
+    Raises:
+        APIException: If the item type is not found or an error occurs.
     """
     logger.info(f"Executing get_jama_item_type tool for item_type_id: {item_type_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        item_type = jama_client.get_item_type(item_type_id=item_type_id)
-        if not item_type:
-             return {"error": f"Item type with ID {item_type_id} not found."}
-        logger.info(f"Retrieved item type {item_type_id}.")
-        return item_type
-    except Exception as e:
-        logger.error(f"Error in get_jama_item_type tool for item_type_id {item_type_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve item type {item_type_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    item_type = jama_client.get_item_type(item_type_id=item_type_id)
+    if not item_type and MOCK_MODE:
+         raise ValueError(f"Mock Item type with ID {item_type_id} not found.")
+    logger.info(f"Retrieved item type {item_type_id}.")
+    return item_type
 
 @mcp.tool()
 async def get_jama_pick_lists(ctx: Context) -> list[dict]:
-    """Retrieves all pick lists from Jama Connect."""
+    """
+    Retrieves all pick lists from Jama Connect.
+
+    Returns:
+        A list of dictionaries representing pick lists.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
+    """
     logger.info("Executing get_jama_pick_lists tool")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        pick_lists = jama_client.get_pick_lists()
-        logger.info(f"Retrieved {len(pick_lists)} pick lists.")
-        return pick_lists if pick_lists else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_pick_lists tool: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve pick lists: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    pick_lists = jama_client.get_pick_lists()
+    logger.info(f"Retrieved {len(pick_lists)} pick lists.")
+    return pick_lists if pick_lists else []
 
 @mcp.tool()
 async def get_jama_pick_list(pick_list_id: str, ctx: Context) -> dict:
@@ -340,18 +365,20 @@ async def get_jama_pick_list(pick_list_id: str, ctx: Context) -> dict:
 
     Args:
         pick_list_id: The ID (as a string) of the pick list.
+
+    Returns:
+        A dictionary representing the pick list.
+
+    Raises:
+        APIException: If the pick list is not found or an error occurs.
     """
     logger.info(f"Executing get_jama_pick_list tool for pick_list_id: {pick_list_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        pick_list = jama_client.get_pick_list(pick_list_id=pick_list_id)
-        if not pick_list:
-             return {"error": f"Pick list with ID {pick_list_id} not found."}
-        logger.info(f"Retrieved pick list {pick_list_id}.")
-        return pick_list
-    except Exception as e:
-        logger.error(f"Error in get_jama_pick_list tool for pick_list_id {pick_list_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve pick list {pick_list_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    pick_list = jama_client.get_pick_list(pick_list_id=pick_list_id)
+    if not pick_list and MOCK_MODE:
+         raise ValueError(f"Mock Pick list with ID {pick_list_id} not found.")
+    logger.info(f"Retrieved pick list {pick_list_id}.")
+    return pick_list
 
 @mcp.tool()
 async def get_jama_pick_list_options(pick_list_id: str, ctx: Context) -> list[dict]:
@@ -360,16 +387,18 @@ async def get_jama_pick_list_options(pick_list_id: str, ctx: Context) -> list[di
 
     Args:
         pick_list_id: The ID (as a string) of the pick list.
+
+    Returns:
+        A list of dictionaries representing pick list options.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_pick_list_options tool for pick_list_id: {pick_list_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        options = jama_client.get_pick_list_options(pick_list_id=pick_list_id)
-        logger.info(f"Retrieved {len(options)} options for pick list {pick_list_id}.")
-        return options if options else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_pick_list_options tool for pick_list_id {pick_list_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve options for pick list {pick_list_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    options = jama_client.get_pick_list_options(pick_list_id=pick_list_id)
+    logger.info(f"Retrieved {len(options)} options for pick list {pick_list_id}.")
+    return options if options else []
 
 @mcp.tool()
 async def get_jama_pick_list_option(pick_list_option_id: str, ctx: Context) -> dict:
@@ -378,18 +407,20 @@ async def get_jama_pick_list_option(pick_list_option_id: str, ctx: Context) -> d
 
     Args:
         pick_list_option_id: The ID (as a string) of the pick list option.
+
+    Returns:
+        A dictionary representing the pick list option.
+
+    Raises:
+        APIException: If the pick list option is not found or an error occurs.
     """
     logger.info(f"Executing get_jama_pick_list_option tool for pick_list_option_id: {pick_list_option_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        option = jama_client.get_pick_list_option(pick_list_option_id=pick_list_option_id)
-        if not option:
-             return {"error": f"Pick list option with ID {pick_list_option_id} not found."}
-        logger.info(f"Retrieved pick list option {pick_list_option_id}.")
-        return option
-    except Exception as e:
-        logger.error(f"Error in get_jama_pick_list_option tool for pick_list_option_id {pick_list_option_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve pick list option {pick_list_option_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    option = jama_client.get_pick_list_option(pick_list_option_id=pick_list_option_id)
+    if not option and MOCK_MODE:
+         raise ValueError(f"Mock Pick list option with ID {pick_list_option_id} not found.")
+    logger.info(f"Retrieved pick list option {pick_list_option_id}.")
+    return option
 
 @mcp.tool()
 async def get_jama_tags(project_id: str, ctx: Context) -> list[dict]:
@@ -398,16 +429,18 @@ async def get_jama_tags(project_id: str, ctx: Context) -> list[dict]:
 
     Args:
         project_id: The ID (as a string) of the Jama project.
+
+    Returns:
+        A list of dictionaries representing tags.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_tags tool for project_id: {project_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        tags = jama_client.get_tags(project=project_id) # Param name is 'project' in client
-        logger.info(f"Retrieved {len(tags)} tags for project {project_id}.")
-        return tags if tags else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_tags tool for project_id {project_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve tags for project {project_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    tags = jama_client.get_tags(project=project_id) # Param name is 'project' in client
+    logger.info(f"Retrieved {len(tags)} tags for project {project_id}.")
+    return tags if tags else []
 
 @mcp.tool()
 async def get_jama_tagged_items(tag_id: str, ctx: Context) -> list[dict]:
@@ -416,16 +449,18 @@ async def get_jama_tagged_items(tag_id: str, ctx: Context) -> list[dict]:
 
     Args:
         tag_id: The ID (as a string) of the tag.
+
+    Returns:
+        A list of dictionaries representing items associated with the tag.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_tagged_items tool for tag_id: {tag_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        items = jama_client.get_tagged_items(tag_id=tag_id)
-        logger.info(f"Retrieved {len(items)} items for tag {tag_id}.")
-        return items if items else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_tagged_items tool for tag_id {tag_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve items for tag {tag_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    items = jama_client.get_tagged_items(tag_id=tag_id)
+    logger.info(f"Retrieved {len(items)} items for tag {tag_id}.")
+    return items if items else []
 
 @mcp.tool()
 async def get_jama_test_cycle(test_cycle_id: str, ctx: Context) -> dict:
@@ -434,18 +469,20 @@ async def get_jama_test_cycle(test_cycle_id: str, ctx: Context) -> dict:
 
     Args:
         test_cycle_id: The ID (as a string) of the test cycle.
+
+    Returns:
+        A dictionary representing the test cycle.
+
+    Raises:
+        APIException: If the test cycle is not found or an error occurs.
     """
     logger.info(f"Executing get_jama_test_cycle tool for test_cycle_id: {test_cycle_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        cycle = jama_client.get_test_cycle(test_cycle_id=test_cycle_id)
-        if not cycle:
-             return {"error": f"Test cycle with ID {test_cycle_id} not found."}
-        logger.info(f"Retrieved test cycle {test_cycle_id}.")
-        return cycle
-    except Exception as e:
-        logger.error(f"Error in get_jama_test_cycle tool for test_cycle_id {test_cycle_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve test cycle {test_cycle_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    cycle = jama_client.get_test_cycle(test_cycle_id=test_cycle_id)
+    if not cycle and MOCK_MODE:
+         raise ValueError(f"Mock Test cycle with ID {test_cycle_id} not found.")
+    logger.info(f"Retrieved test cycle {test_cycle_id}.")
+    return cycle
 
 @mcp.tool()
 async def get_jama_test_runs(test_cycle_id: str, ctx: Context) -> list[dict]:
@@ -454,16 +491,18 @@ async def get_jama_test_runs(test_cycle_id: str, ctx: Context) -> list[dict]:
 
     Args:
         test_cycle_id: The ID (as a string) of the test cycle.
+
+    Returns:
+        A list of dictionaries representing test runs.
+
+    Raises:
+        APIException: If an error occurs during the Jama API call.
     """
     logger.info(f"Executing get_jama_test_runs tool for test_cycle_id: {test_cycle_id}")
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
-        runs = jama_client.get_testruns(test_cycle_id=test_cycle_id)
-        logger.info(f"Retrieved {len(runs)} test runs for cycle {test_cycle_id}.")
-        return runs if runs else []
-    except Exception as e:
-        logger.error(f"Error in get_jama_test_runs tool for test_cycle_id {test_cycle_id}: {e}", exc_info=True)
-        return {"error": f"Failed to retrieve test runs for cycle {test_cycle_id}: {str(e)}"}
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    runs = jama_client.get_testruns(test_cycle_id=test_cycle_id)
+    logger.info(f"Retrieved {len(runs)} test runs for cycle {test_cycle_id}.")
+    return runs if runs else []
 
 
 
@@ -472,44 +511,24 @@ async def test_jama_connection(ctx: Context) -> dict:
     """
     Tests the connection and authentication to the Jama Connect API.
     Attempts to fetch available API endpoints as a lightweight check.
+
+    Returns:
+        A dictionary containing the result of the get_available_endpoints call.
+
+    Raises:
+        APIException: If the connection test fails.
+        ValueError: If the JamaClient is not found in the context.
     """
     logger.info("Executing test_jama_connection tool")
-    result = {"status": "unknown", "jama_client_initialized": False, "jama_api_accessible": False, "message": ""}
-    try:
-        jama_client: JamaClient = ctx.request_context.lifespan_context.get("jama_client")
-        result["jama_client_initialized"] = jama_client is not None
+    jama_client: JamaClient = ctx.request_context.lifespan_context.get("jama_client")
+    if not jama_client:
+        raise ValueError("JamaClient not found in context for connection test.")
 
-        if not jama_client:
-            result["status"] = "error"
-            result["message"] = "JamaClient not found in context."
-            return result
-
-        # Attempt a simple API call to verify connection further
-        try:
-            # Using get_available_endpoints as a lightweight check
-            endpoints = jama_client.get_available_endpoints()
-            # Simple check if we got *something* back that looks like API response
-            if isinstance(endpoints, dict) and 'data' in endpoints:
-                 result["jama_api_accessible"] = True
-                 result["status"] = "ok"
-                 result["message"] = f"Successfully connected and fetched {len(endpoints.get('data',[]))} available endpoints."
-            else:
-                 result["status"] = "error"
-                 result["message"] = f"Connected, but failed to fetch endpoints or response format unexpected: {endpoints}"
-
-        except Exception as api_err:
-            logger.warning(f"Test API call failed during connection test: {api_err}", exc_info=True)
-            result["status"] = "error"
-            result["message"] = f"JamaClient initialized, but API call failed: {str(api_err)}"
-            result["jama_api_accessible"] = False
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Unexpected error in test_jama_connection tool: {e}", exc_info=True)
-        result["status"] = "error"
-        result["message"] = f"Unexpected error during test: {str(e)}"
-        return result
+    # Attempt a simple API call to verify connection further
+    # Let any exceptions propagate
+    endpoints = jama_client.get_available_endpoints()
+    logger.info(f"Connection test successful. Fetched endpoints: {endpoints}")
+    return endpoints # Return the actual result or let exception indicate failure
 
 
 if __name__ == "__main__":
