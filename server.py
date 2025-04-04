@@ -4,39 +4,25 @@ from collections.abc import AsyncIterator
 import logging
 
 from mcp.server.fastmcp import FastMCP, Context
+
+# Configure basic logging FIRST
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - SERVER - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 # Check if we need the real client or can use a mock
 MOCK_MODE = os.environ.get("JAMA_MOCK_MODE", "false").lower() == "true"
 
-if not MOCK_MODE:
-    from py_jama_rest_client.client import JamaClient
+if MOCK_MODE:
+    from mock_client import MockJamaClient as JamaClient # Import the mock
+    logger.info("Using MockJamaClient due to JAMA_MOCK_MODE=true")
 else:
-    # Define a mock client if in mock mode
-    class MockJamaClient:
-        def get_projects(self):
-            logger.info("MOCK: get_projects() called")
-            return [{"id": 1, "name": "Mock Project Alpha", "projectKey": "MPA"},
-                    {"id": 2, "name": "Mock Project Beta", "projectKey": "MPB"}]
-
-        def get_item(self, item_id: int):
-            logger.info(f"MOCK: get_item({item_id}) called")
-            if item_id == 123:
-                return {"id": 123, "documentKey": "MOCK-1", "fields": {"name": "Mock Item 123", "description": "A sample item."}}
-            elif item_id == 456:
-                 return {"id": 456, "documentKey": "MOCK-2", "fields": {"name": "Another Mock Item", "description": "Details here."}}
-            else:
-                # Simulate not found for other IDs in mock mode
-                return None # Or raise an appropriate exception if the real client does
-
-        def get_available_endpoints(self):
-             logger.info("MOCK: get_available_endpoints() called")
-             # Return a structure similar to the real API if known, otherwise simple dict
-             return {"data": [{"path": "/mock", "method": "GET"}]}
-
-    JamaClient = MockJamaClient # Use the mock class instead of the real one
-
-# Configure basic logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    try:
+        from py_jama_rest_client.client import JamaClient # Import the real client
+        logger.info("Using real py_jama_rest_client.client.JamaClient")
+    except ImportError:
+        logger.error("Failed to import real JamaClient. Is py-jama-rest-client installed?")
+        # Exit or raise a more specific error if the real client is mandatory when not in mock mode
+        raise
 
 @asynccontextmanager
 async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
@@ -131,12 +117,12 @@ async def get_jama_projects(ctx: Context) -> list[dict]:
         return {"error": f"Failed to retrieve Jama projects: {str(e)}"}
 
 @mcp.tool()
-async def get_jama_item(item_id: int, ctx: Context) -> dict:
+async def get_jama_item(item_id: str, ctx: Context) -> dict:
     """
     Retrieves details for a specific item from Jama Connect by its ID.
 
     Args:
-        item_id: The ID of the Jama item to retrieve.
+        item_id: The ID (as a string) of the Jama item to retrieve.
     """
     logger.info(f"Executing get_jama_item tool for item_id: {item_id}")
     try:
@@ -149,6 +135,29 @@ async def get_jama_item(item_id: int, ctx: Context) -> dict:
     except Exception as e:
         logger.error(f"Error in get_jama_item tool for item_id {item_id}: {e}", exc_info=True)
         return {"error": f"Failed to retrieve Jama item {item_id}: {str(e)}"}
+
+@mcp.tool()
+async def get_jama_project_items(project_id: str, ctx: Context) -> list[dict]:
+    """
+    Retrieves a list of items for a specific project from Jama Connect.
+
+    Args:
+        project_id: The ID (as a string) of the Jama project.
+    """
+    logger.info(f"Executing get_jama_project_items tool for project_id: {project_id}")
+    try:
+        jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+        # The py_jama_rest_client's get_items method handles pagination internally when called with project ID
+        # The underlying client handles string conversion if needed, pass the string directly.
+        # The get_items method expects project_id as a keyword argument.
+        items = jama_client.get_items(project_id=project_id)
+        logger.info(f"Retrieved {len(items)} items for project {project_id}.")
+        # Return items, or an empty list if none found/error in client (client might return empty list on 404)
+        return items if items else []
+    except Exception as e:
+        logger.error(f"Error in get_jama_project_items tool for project_id {project_id}: {e}", exc_info=True)
+        # Return error dict for tool failures
+        return {"error": f"Failed to retrieve items for Jama project {project_id}: {str(e)}"}
 
 
 @mcp.tool()

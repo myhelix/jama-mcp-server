@@ -67,7 +67,7 @@ async def main():
                 # 3. Get Item Tool (Existing Mock ID)
                 logger.info("Calling tool: get_jama_item (item_id=123)")
                 try:
-                    result = await session.call_tool("get_jama_item", arguments={"item_id": 123})
+                    result = await session.call_tool("get_jama_item", arguments={"item_id": "123"}) # Pass ID as string
                     logger.info(f"Result (get_jama_item, id=123): {result}")
                     test_results["get_item_123"] = result
                 except Exception as e:
@@ -77,12 +77,32 @@ async def main():
                 # 4. Get Item Tool (Non-Existing Mock ID)
                 logger.info("Calling tool: get_jama_item (item_id=999)")
                 try:
-                    result = await session.call_tool("get_jama_item", arguments={"item_id": 999})
+                    result = await session.call_tool("get_jama_item", arguments={"item_id": "999"}) # Pass ID as string
                     logger.info(f"Result (get_jama_item, id=999): {result}")
                     test_results["get_item_999"] = result
                 except Exception as e:
                     logger.error(f"Error calling get_jama_item(999): {e}", exc_info=True)
                     test_results["get_item_999"] = {"error": str(e)}
+
+                # 5. Get Project Items Tool (Existing Mock Project ID 1)
+                logger.info("Calling tool: get_jama_project_items (project_id=1)")
+                try:
+                    result = await session.call_tool("get_jama_project_items", arguments={"project_id": "1"}) # Pass ID as string
+                    logger.info(f"Result (get_jama_project_items, project_id=1): {result}")
+                    test_results["get_project_items_1"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_project_items(1): {e}", exc_info=True)
+                    test_results["get_project_items_1"] = {"error": str(e)}
+
+                # 6. Get Project Items Tool (Non-Existing Mock Project ID 99)
+                logger.info("Calling tool: get_jama_project_items (project_id=99)")
+                try:
+                    result = await session.call_tool("get_jama_project_items", arguments={"project_id": "99"}) # Pass ID as string
+                    logger.info(f"Result (get_jama_project_items, project_id=99): {result}")
+                    test_results["get_project_items_99"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_project_items(99): {e}", exc_info=True)
+                    test_results["get_project_items_99"] = {"error": str(e)}
 
                 # --- Print Summary ---
                 print("\n--- Test Summary ---")
