@@ -104,6 +104,81 @@ async def main():
                     logger.error(f"Error calling get_jama_project_items(99): {e}", exc_info=True)
                     test_results["get_project_items_99"] = {"error": str(e)}
 
+                # 7. Get Item Children (Parent ID 123)
+                logger.info("Calling tool: get_jama_item_children (item_id=123)")
+                try:
+                    result = await session.call_tool("get_jama_item_children", arguments={"item_id": "123"})
+                    logger.info(f"Result (get_jama_item_children, id=123): {result}")
+                    test_results["get_item_children_123"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_item_children(123): {e}", exc_info=True)
+                    test_results["get_item_children_123"] = {"error": str(e)}
+
+                # 8. Get Item Children (Parent ID 999)
+                logger.info("Calling tool: get_jama_item_children (item_id=999)")
+                try:
+                    result = await session.call_tool("get_jama_item_children", arguments={"item_id": "999"})
+                    logger.info(f"Result (get_jama_item_children, id=999): {result}")
+                    test_results["get_item_children_999"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_item_children(999): {e}", exc_info=True)
+                    test_results["get_item_children_999"] = {"error": str(e)}
+
+                # 9. Get Relationships (Project ID 1)
+                logger.info("Calling tool: get_jama_relationships (project_id=1)")
+                try:
+                    result = await session.call_tool("get_jama_relationships", arguments={"project_id": "1"})
+                    logger.info(f"Result (get_jama_relationships, project_id=1): {result}")
+                    test_results["get_relationships_1"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_relationships(1): {e}", exc_info=True)
+                    test_results["get_relationships_1"] = {"error": str(e)}
+
+                # 10. Get Relationship (ID 101)
+                logger.info("Calling tool: get_jama_relationship (relationship_id=101)")
+                try:
+                    result = await session.call_tool("get_jama_relationship", arguments={"relationship_id": "101"})
+                    logger.info(f"Result (get_jama_relationship, id=101): {result}")
+                    test_results["get_relationship_101"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_relationship(101): {e}", exc_info=True)
+                    test_results["get_relationship_101"] = {"error": str(e)}
+
+                # Add more tests for other tools as needed...
+                # e.g., get_jama_item_upstream_relationships, get_jama_item_types, etc.
+                # Remember to use appropriate mock IDs defined in mock_client.py
+
+                # Example: Get Item Types
+                logger.info("Calling tool: get_jama_item_types")
+                try:
+                    result = await session.call_tool("get_jama_item_types")
+                    logger.info(f"Result (get_jama_item_types): {result}")
+                    test_results["get_item_types"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_item_types: {e}", exc_info=True)
+                    test_results["get_item_types"] = {"error": str(e)}
+
+                # Example: Get Tags for Project 1
+                logger.info("Calling tool: get_jama_tags (project_id=1)")
+                try:
+                    result = await session.call_tool("get_jama_tags", arguments={"project_id": "1"})
+                    logger.info(f"Result (get_jama_tags, project_id=1): {result}")
+                    test_results["get_tags_1"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_tags(1): {e}", exc_info=True)
+                    test_results["get_tags_1"] = {"error": str(e)}
+
+                # Example: Get Test Runs for Cycle 501
+                logger.info("Calling tool: get_jama_test_runs (test_cycle_id=501)")
+                try:
+                    result = await session.call_tool("get_jama_test_runs", arguments={"test_cycle_id": "501"})
+                    logger.info(f"Result (get_jama_test_runs, cycle=501): {result}")
+                    test_results["get_test_runs_501"] = result
+                except Exception as e:
+                    logger.error(f"Error calling get_jama_test_runs(501): {e}", exc_info=True)
+                    test_results["get_test_runs_501"] = {"error": str(e)}
+
+
                 # --- Print Summary ---
                 print("\n--- Test Summary ---")
                 for test_name, result_data in test_results.items():
