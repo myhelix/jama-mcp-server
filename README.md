@@ -1,4 +1,4 @@
-# Jama Connect MCP Server (Third-Party)
+# Jama Connect MCP Server (Unofficial)
 
 This project provides a Model Context Protocol (MCP) server that exposes read-only tools for interacting with a Jama Connect instance. It acts as a wrapper around the official [Jama Software `py-jama-rest-client`](https://github.com/JamaSoftware/py-jama-rest-client) library.
 
@@ -10,7 +10,7 @@ This project provides a Model Context Protocol (MCP) server that exposes read-on
 
 This MCP server is **intentionally not published** as a package on PyPI or other indices. This decision encourages users to:
 
-1.  **Clone the Repository:** Obtain the code directly.
+1.  **Clone/Fork the Repository:** Obtain the code directly.
 2.  **Inspect the Code:** Understand exactly what the server does before running it, especially concerning API interactions and credential handling.
 3.  **Adapt as Needed:** Modify the code for specific enterprise requirements or security postures.
 
@@ -95,8 +95,6 @@ Configure your MCP client (like Cline, RooCode, Claude Desktop) to launch this s
 ```json
 {
   "mcpServers": {
-    // ... other servers ...
-
     "jama-mcp": {
       "command": "uv",
       "args": [
@@ -104,24 +102,13 @@ Configure your MCP client (like Cline, RooCode, Claude Desktop) to launch this s
         "python",
         "server.py"
       ],
-      // "cwd" MUST point to the 'jama_mcp_server' directory
-      // within your cloned 'jama-mcp' repository.
-      // Adjust relative path based on where client runs from.
-      // Use the absolute path to the server directory
-      "cwd": "/home/.../jama_mcp_server",
+      
+      "cwd": "/full/path_to/project_dir",
       "env": {
-        // Option 1: Pass credentials via client config
-        // "JAMA_URL": "https://your.jama.instance.com",
-        // "JAMA_CLIENT_ID": "your_client_id",
-        // "JAMA_CLIENT_SECRET": "your_client_secret",
-
-        // Option 2: Use Mock Mode via client config
-        "JAMA_MOCK_MODE": "true"
-
-        // Note: If not using Mock Mode and not passing credentials
-        // here, ensure the required JAMA_URL, JAMA_CLIENT_ID, and
-        // JAMA_CLIENT_SECRET variables are set in the environment
-        // where the client launches the server process.
+        "JAMA_URL": "https://your.jama.instance.com",
+        "JAMA_CLIENT_ID": "your_client_id",
+        "JAMA_CLIENT_SECRET": "your_client_secret",
+        "JAMA_MOCK_MODE": "false"
       }
     }
   }
