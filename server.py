@@ -28,7 +28,7 @@ else:
 async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     """
     Manages the JamaClient lifecycle, handling authentication based on environment variables.
-    Prioritizes OAuth 2.0, falls back to Basic Auth.
+    Handles OAuth 2.0 authentication based on environment variables.
     """
     if MOCK_MODE:
         logger.info("Jama Mock Mode enabled. Skipping real authentication.")
@@ -46,8 +46,6 @@ async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     jama_url = os.environ.get("JAMA_URL")
     client_id = os.environ.get("JAMA_CLIENT_ID")
     client_secret = os.environ.get("JAMA_CLIENT_SECRET")
-    username = os.environ.get("JAMA_USER")
-    password = os.environ.get("JAMA_PASSWORD")
 
     if not jama_url:
         logger.error("JAMA_URL environment variable not set. Cannot connect to Jama.")
@@ -62,15 +60,10 @@ async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
             # Note: py-jama-rest-client uses client_id/secret directly in constructor for OAuth
             jama_client = JamaClient(host_domain=jama_url, client_id=client_id, client_secret=client_secret)
             auth_method = "OAuth 2.0"
-        elif username and password:
-            logger.info(f"Attempting Basic authentication to Jama at {jama_url}")
-            jama_client = JamaClient(host_domain=jama_url, credentials=(username, password))
-            auth_method = "Basic Auth"
         else:
-            logger.error("Missing required Jama authentication environment variables. "
-                         "Set either (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET) for OAuth "
-                         "or (JAMA_USER, JAMA_PASSWORD) for Basic Auth.")
-            raise ValueError("Missing Jama authentication credentials in environment variables.")
+            logger.error("Missing required Jama OAuth authentication environment variables. "
+                         "Set JAMA_CLIENT_ID and JAMA_CLIENT_SECRET.")
+            raise ValueError("Missing Jama OAuth credentials (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET) in environment variables.")
 
         # Optional: Add a simple check to confirm connection/authentication if the client library supports it easily.
         # For now, we assume instantiation implies potential connectivity.
@@ -113,7 +106,6 @@ async def get_jama_projects(ctx: Context) -> list[dict]:
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     # Let exceptions from the client propagate
     projects = jama_client.get_projects()
-    logger.info(f"Retrieved {len(projects)} projects.")
     return projects
 
 @mcp.tool()
@@ -136,7 +128,6 @@ async def get_jama_item(item_id: str, ctx: Context) -> dict:
     # Let the client raise ResourceNotFoundException if applicable
     if not item and MOCK_MODE: # Handle mock case explicitly if needed
         raise ValueError(f"Mock Item with ID {item_id} not found.")
-    logger.info(f"Retrieved item {item_id}.")
     return item
 
 @mcp.tool()
@@ -156,7 +147,6 @@ async def get_jama_project_items(project_id: str, ctx: Context) -> list[dict]:
     logger.info(f"Executing get_jama_project_items tool for project_id: {project_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     items = jama_client.get_items(project_id=project_id)
-    logger.info(f"Retrieved {len(items)} items for project {project_id}.")
     return items if items else []
 
 @mcp.tool()
@@ -176,7 +166,6 @@ async def get_jama_item_children(item_id: str, ctx: Context) -> list[dict]:
     logger.info(f"Executing get_jama_item_children tool for parent_id: {item_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     children = jama_client.get_item_children(item_id=item_id)
-    logger.info(f"Retrieved {len(children)} child items for parent {item_id}.")
     return children if children else []
 
 @mcp.tool()
@@ -196,7 +185,6 @@ async def get_jama_relationships(project_id: str, ctx: Context) -> list[dict]:
     logger.info(f"Executing get_jama_relationships tool for project_id: {project_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     relationships = jama_client.get_relationships(project_id=project_id)
-    logger.info(f"Retrieved {len(relationships)} relationships for project {project_id}.")
     return relationships if relationships else []
 
 @mcp.tool()
@@ -219,7 +207,6 @@ async def get_jama_relationship(relationship_id: str, ctx: Context) -> dict:
     # Let py-jama-rest-client raise ResourceNotFoundException if applicable
     if not relationship and MOCK_MODE: # Handle mock case explicitly if needed
          raise ValueError(f"Mock Relationship with ID {relationship_id} not found.")
-    logger.info(f"Retrieved relationship {relationship_id}.")
     return relationship
 
 @mcp.tool()
@@ -239,7 +226,6 @@ async def get_jama_item_upstream_relationships(item_id: str, ctx: Context) -> li
     logger.info(f"Executing get_jama_item_upstream_relationships tool for item_id: {item_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     relationships = jama_client.get_items_upstream_relationships(item_id=item_id)
-    logger.info(f"Retrieved {len(relationships)} upstream relationships for item {item_id}.")
     return relationships if relationships else []
 
 @mcp.tool()
@@ -259,7 +245,6 @@ async def get_jama_item_downstream_relationships(item_id: str, ctx: Context) -> 
     logger.info(f"Executing get_jama_item_downstream_relationships tool for item_id: {item_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     relationships = jama_client.get_items_downstream_relationships(item_id=item_id)
-    logger.info(f"Retrieved {len(relationships)} downstream relationships for item {item_id}.")
     return relationships if relationships else []
 
 @mcp.tool()
@@ -279,7 +264,6 @@ async def get_jama_item_upstream_related(item_id: str, ctx: Context) -> list[dic
     logger.info(f"Executing get_jama_item_upstream_related tool for item_id: {item_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     items = jama_client.get_items_upstream_related(item_id=item_id)
-    logger.info(f"Retrieved {len(items)} upstream related items for item {item_id}.")
     return items if items else []
 
 @mcp.tool()
@@ -299,7 +283,6 @@ async def get_jama_item_downstream_related(item_id: str, ctx: Context) -> list[d
     logger.info(f"Executing get_jama_item_downstream_related tool for item_id: {item_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     items = jama_client.get_items_downstream_related(item_id=item_id)
-    logger.info(f"Retrieved {len(items)} downstream related items for item {item_id}.")
     return items if items else []
 
 @mcp.tool()
@@ -316,7 +299,6 @@ async def get_jama_item_types(ctx: Context) -> list[dict]:
     logger.info("Executing get_jama_item_types tool")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     item_types = jama_client.get_item_types()
-    logger.info(f"Retrieved {len(item_types)} item types.")
     return item_types if item_types else []
 
 @mcp.tool()
@@ -338,7 +320,6 @@ async def get_jama_item_type(item_type_id: str, ctx: Context) -> dict:
     item_type = jama_client.get_item_type(item_type_id=item_type_id)
     if not item_type and MOCK_MODE:
          raise ValueError(f"Mock Item type with ID {item_type_id} not found.")
-    logger.info(f"Retrieved item type {item_type_id}.")
     return item_type
 
 @mcp.tool()
@@ -355,7 +336,6 @@ async def get_jama_pick_lists(ctx: Context) -> list[dict]:
     logger.info("Executing get_jama_pick_lists tool")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     pick_lists = jama_client.get_pick_lists()
-    logger.info(f"Retrieved {len(pick_lists)} pick lists.")
     return pick_lists if pick_lists else []
 
 @mcp.tool()
@@ -377,7 +357,6 @@ async def get_jama_pick_list(pick_list_id: str, ctx: Context) -> dict:
     pick_list = jama_client.get_pick_list(pick_list_id=pick_list_id)
     if not pick_list and MOCK_MODE:
          raise ValueError(f"Mock Pick list with ID {pick_list_id} not found.")
-    logger.info(f"Retrieved pick list {pick_list_id}.")
     return pick_list
 
 @mcp.tool()
@@ -397,7 +376,6 @@ async def get_jama_pick_list_options(pick_list_id: str, ctx: Context) -> list[di
     logger.info(f"Executing get_jama_pick_list_options tool for pick_list_id: {pick_list_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     options = jama_client.get_pick_list_options(pick_list_id=pick_list_id)
-    logger.info(f"Retrieved {len(options)} options for pick list {pick_list_id}.")
     return options if options else []
 
 @mcp.tool()
@@ -419,7 +397,6 @@ async def get_jama_pick_list_option(pick_list_option_id: str, ctx: Context) -> d
     option = jama_client.get_pick_list_option(pick_list_option_id=pick_list_option_id)
     if not option and MOCK_MODE:
          raise ValueError(f"Mock Pick list option with ID {pick_list_option_id} not found.")
-    logger.info(f"Retrieved pick list option {pick_list_option_id}.")
     return option
 
 @mcp.tool()
@@ -439,7 +416,6 @@ async def get_jama_tags(project_id: str, ctx: Context) -> list[dict]:
     logger.info(f"Executing get_jama_tags tool for project_id: {project_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     tags = jama_client.get_tags(project=project_id) # Param name is 'project' in client
-    logger.info(f"Retrieved {len(tags)} tags for project {project_id}.")
     return tags if tags else []
 
 @mcp.tool()
@@ -459,7 +435,6 @@ async def get_jama_tagged_items(tag_id: str, ctx: Context) -> list[dict]:
     logger.info(f"Executing get_jama_tagged_items tool for tag_id: {tag_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     items = jama_client.get_tagged_items(tag_id=tag_id)
-    logger.info(f"Retrieved {len(items)} items for tag {tag_id}.")
     return items if items else []
 
 @mcp.tool()
@@ -481,7 +456,6 @@ async def get_jama_test_cycle(test_cycle_id: str, ctx: Context) -> dict:
     cycle = jama_client.get_test_cycle(test_cycle_id=test_cycle_id)
     if not cycle and MOCK_MODE:
          raise ValueError(f"Mock Test cycle with ID {test_cycle_id} not found.")
-    logger.info(f"Retrieved test cycle {test_cycle_id}.")
     return cycle
 
 @mcp.tool()
@@ -501,7 +475,6 @@ async def get_jama_test_runs(test_cycle_id: str, ctx: Context) -> list[dict]:
     logger.info(f"Executing get_jama_test_runs tool for test_cycle_id: {test_cycle_id}")
     jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
     runs = jama_client.get_testruns(test_cycle_id=test_cycle_id)
-    logger.info(f"Retrieved {len(runs)} test runs for cycle {test_cycle_id}.")
     return runs if runs else []
 
 
@@ -527,7 +500,6 @@ async def test_jama_connection(ctx: Context) -> dict:
     # Attempt a simple API call to verify connection further
     # Let any exceptions propagate
     endpoints = jama_client.get_available_endpoints()
-    logger.info(f"Connection test successful. Fetched endpoints: {endpoints}")
     return endpoints # Return the actual result or let exception indicate failure
 
 
@@ -540,7 +512,7 @@ if __name__ == "__main__":
     # Skip credential check if in mock mode
     if not MOCK_MODE and not os.environ.get("JAMA_URL"):
         print("\nERROR: JAMA_URL environment variable is not set.")
-        print("Please set JAMA_URL and authentication variables (JAMA_CLIENT_ID/SECRET or JAMA_USER/PASSWORD),")
+        print("Please set JAMA_URL and OAuth authentication variables (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET),")
         print("or run in mock mode by setting JAMA_MOCK_MODE=true.")
         exit(1)
 
