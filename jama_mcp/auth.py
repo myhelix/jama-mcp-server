@@ -27,8 +27,8 @@ def get_jama_credentials() -> Tuple[str, str]:
     Retrieves Jama OAuth credentials (client_id, client_secret).
 
     Resolution order:
-    1. AWS Parameter Store (if JAMA_AWS_SECRET_PATH is set)
-    2. Environment variables (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET)
+    1. Environment variables (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET)
+    2. AWS Parameter Store (if JAMA_AWS_SECRET_PATH is set and direct variables are not)
 
     Environment Variables:
         JAMA_AWS_SECRET_PATH (str, optional): The name/path of the secret in AWS Parameter Store.
@@ -45,13 +45,25 @@ def get_jama_credentials() -> Tuple[str, str]:
         InvalidSecretFormatError: If the AWS secret format is incorrect.
         ImportError: If boto3 is required but not installed.
     """
-    aws_secret_path = os.environ.get("JAMA_AWS_SECRET_PATH")
+    # 1. Check for direct environment variables first
+    client_id = os.environ.get("JAMA_CLIENT_ID")
+    client_secret = os.environ.get("JAMA_CLIENT_SECRET")
 
+    if client_id and client_secret:
+        logger.info("Using JAMA_CLIENT_ID and JAMA_CLIENT_SECRET from environment variables.")
+        return client_id, client_secret
+    else:
+        logger.info("Direct JAMA_CLIENT_ID/SECRET not found or incomplete.")
+
+    # 2. If direct variables not found, check for AWS Parameter Store path
+    aws_secret_path = os.environ.get("JAMA_AWS_SECRET_PATH")
     if aws_secret_path:
         logger.info(f"Attempting to fetch Jama credentials from AWS Parameter Store path: {aws_secret_path}")
         try:
             import boto3
         except ImportError:
+            logger.error("boto3 library is required to fetch credentials from AWS Parameter Store but is not installed.")
+            # Raise the error here, as it's only needed if we reach this fallback path
             raise ImportError("boto3 is required for AWS Parameter Store integration. Please install it.")
 
         aws_profile = os.environ.get("JAMA_AWS_PROFILE")
@@ -64,34 +76,27 @@ def get_jama_credentials() -> Tuple[str, str]:
             secret_string = parameter['Parameter']['Value']
             logger.info("Successfully retrieved secret from AWS Parameter Store.")
 
-        except Exception as e:
-            raise AWSParameterStoreError(f"Failed to retrieve secret from AWS Parameter Store path '{aws_secret_path}': {e}") from e
+        except Exception:
+            raise AWSParameterStoreError(f"Failed to retrieve secret from AWS Parameter Store path '{aws_secret_path}'")
 
         try:
             secret_data = json.loads(secret_string)
-            client_id = secret_data.get("client_id")
-            client_secret = secret_data.get("client_secret")
+            aws_client_id = secret_data.get("client_id")
+            aws_client_secret = secret_data.get("client_secret")
 
-            if not client_id or not client_secret:
+            if not aws_client_id or not aws_client_secret:
                 raise InvalidSecretFormatError("AWS Parameter Store secret JSON must contain 'client_id' and 'client_secret' keys.")
 
             logger.info("Successfully parsed client_id and client_secret from AWS secret.")
-            return client_id, client_secret
+            return aws_client_id, aws_client_secret
 
-        except json.JSONDecodeError as e:
-            raise InvalidSecretFormatError(f"Failed to parse JSON secret from AWS Parameter Store path '{aws_secret_path}': {e}") from e
+        except json.JSONDecodeError:
+            raise InvalidSecretFormatError(f"Failed to parse JSON secret from AWS Parameter Store path '{aws_secret_path}'")
         except InvalidSecretFormatError: # Re-raise specific error
              raise
-        except Exception as e: # Catch any other parsing/access errors
-            raise InvalidSecretFormatError(f"Error processing secret data from AWS Parameter Store path '{aws_secret_path}': {e}") from e
+        except Exception: # Catch any other parsing/access errors
+            raise InvalidSecretFormatError(f"Error processing secret data from AWS Parameter Store path '{aws_secret_path}'")
 
-    else:
-        logger.info("JAMA_AWS_SECRET_PATH not set. Checking for direct environment variables.")
-        client_id = os.environ.get("JAMA_CLIENT_ID")
-        client_secret = os.environ.get("JAMA_CLIENT_SECRET")
-
-        if client_id and client_secret:
-            logger.info("Using JAMA_CLIENT_ID and JAMA_CLIENT_SECRET from environment variables.")
-            return client_id, client_secret
-        else:
-            raise MissingCredentialsError("Missing Jama OAuth credentials. Configure AWS Parameter Store (JAMA_AWS_SECRET_PATH) or set environment variables (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET).")
+    # 3. If neither method worked, raise error
+    logger.error("Missing required Jama OAuth credentials. Set JAMA_CLIENT_ID and JAMA_CLIENT_SECRET, or configure JAMA_AWS_SECRET_PATH.")
+    raise MissingCredentialsError("Missing Jama OAuth credentials. Set environment variables (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET) or configure AWS Parameter Store fallback (JAMA_AWS_SECRET_PATH).")
