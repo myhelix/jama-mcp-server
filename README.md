@@ -1,6 +1,6 @@
 # Jama Connect MCP Server (Unofficial)
 
-This project provides a Model Context Protocol (MCP) server that exposes read-only tools for interacting with a Jama Connect instance. It acts as a wrapper around the official [Jama Software `py-jama-rest-client`](https://github.com/JamaSoftware/py-jama-rest-client) library.
+This project provides a Model Context Protocol (MCP) server that exposes read-only tools for interacting with a Jama Connect instance. It acts as an MCP wrapper around the official [Jama Software `py-jama-rest-client`](https://github.com/JamaSoftware/py-jama-rest-client) library.
 
 **Disclaimer:** This is a third-party, open-source project and is not officially affiliated with or endorsed by Jama Software.
 
@@ -26,15 +26,13 @@ This approach prioritizes security awareness and user control over convenience, 
 
 1.  **Clone the Repository:**
     ```bash
-    # Replace <repository_url> with the actual URL
-    git clone <repository_url> jama-mcp-server
+    git clone https://github.com/t-j-thomas/jama-mcp-server.git
     cd jama-mcp-server
     ```
 
 2.  **Install Dependencies:**
     Navigate into the server directory and use `uv` to create a virtual environment and install dependencies.
     ```bash
-    # Ensure you are in the jama-mcp-server directory
     uv sync
     ```
 
