@@ -52,23 +52,18 @@ async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
         raise ValueError("JAMA_URL environment variable is required.")
 
     jama_client = None
-    auth_method = None
 
     try:
         if client_id and client_secret:
             logger.info(f"Attempting OAuth authentication to Jama at {jama_url}")
             # Note: py-jama-rest-client uses client_id/secret directly in constructor for OAuth
-            jama_client = JamaClient(host_domain=jama_url, client_id=client_id, client_secret=client_secret)
-            auth_method = "OAuth 2.0"
+            jama_client = JamaClient(host_domain=jama_url, credentials=(client_id, client_secret), oauth=True)
         else:
             logger.error("Missing required Jama OAuth authentication environment variables. "
                          "Set JAMA_CLIENT_ID and JAMA_CLIENT_SECRET.")
             raise ValueError("Missing Jama OAuth credentials (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET) in environment variables.")
 
-        # Optional: Add a simple check to confirm connection/authentication if the client library supports it easily.
-        # For now, we assume instantiation implies potential connectivity.
-        # e.g., try jama_client.get_available_endpoints() or get_current_user() if not excluded
-        logger.info(f"Successfully configured JamaClient using {auth_method}.")
+        logger.info(f"Successfully configured JamaClient using OAuth.")
 
         yield {"jama_client": jama_client}
 
@@ -85,8 +80,6 @@ async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
 mcp = FastMCP(
     "Jama Connect Server",
     lifespan=jama_lifespan,
-    # Add dependencies required by py-jama-rest-client if needed for deployment packaging
-    # dependencies=["requests"] # py-jama-rest-client likely brings this in
 )
 
 # --- Tool Implementations ---
@@ -507,9 +500,7 @@ if __name__ == "__main__":
     # This allows running the server directly with `python server.py`
     # However, using `mcp dev server.py` or `uv run mcp dev server.py` is recommended for development
     logger.info("Starting Jama MCP server directly (use 'mcp dev' for development features)...")
-    # Note: Need to ensure environment variables are set when running this way.
-    # Example check:
-    # Skip credential check if in mock mode
+    
     if not MOCK_MODE and not os.environ.get("JAMA_URL"):
         print("\nERROR: JAMA_URL environment variable is not set.")
         print("Please set JAMA_URL and OAuth authentication variables (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET),")
