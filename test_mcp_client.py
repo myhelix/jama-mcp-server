@@ -16,7 +16,7 @@ async def main():
     """
     # Ensure the server runs in the correct uv environment and in mock mode
     # We use 'uv run python server.py' to ensure the server runs within its venv
-    server_command = ["uv", "run", "python", "server.py"]
+    server_command = ["uv", "run", "python", "jama_mcp/server.py"]
     server_env = {"JAMA_MOCK_MODE": "true"} # Ensure server starts in mock mode
 
     logger.info(f"Starting server with command: {' '.join(server_command)}")
@@ -124,6 +124,6 @@ async def main():
 
 if __name__ == "__main__":
     # Ensure the script is run from the project root or adjust paths accordingly
-    # For simplicity, assuming it's run from within jama_mcp_server directory
-    # or that server.py path is correct relative to cwd.
+    # For simplicity, assuming it's run from within the jama-mcp-server directory
+    # and that the jama_mcp/server.py path is correct relative to cwd.
     asyncio.run(main())

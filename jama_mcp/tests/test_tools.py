@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 
 # Import the tool functions we want to test
-from jama_mcp_server.server import (
+from jama_mcp.server import (
     get_jama_projects,
     get_jama_item,
     get_jama_project_items

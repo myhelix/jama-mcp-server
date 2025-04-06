@@ -27,14 +27,14 @@ This approach prioritizes security awareness and user control over convenience, 
 1.  **Clone the Repository:**
     ```bash
     # Replace <repository_url> with the actual URL
-    git clone <repository_url> jama-mcp
-    cd jama-mcp
+    git clone <repository_url> jama-mcp-server
+    cd jama-mcp-server
     ```
 
 2.  **Install Dependencies:**
     Navigate into the server directory and use `uv` to create a virtual environment and install dependencies.
     ```bash
-    cd jama_mcp_server
+    # Ensure you are in the jama-mcp-server directory
     uv sync
     ```
 
@@ -68,8 +68,8 @@ Set these variables in the environment where the MCP client will launch the serv
 You can run the server directly for basic checks using `uv` (ensure environment variables are set):
 
 ```bash
-# Ensure you are in the jama_mcp_server directory
-uv run python server.py
+# Ensure you are in the jama-mcp-server directory
+uv run python jama_mcp/server.py
 ```
 ## Testing with `test_mcp_client.py`
 
@@ -78,7 +78,7 @@ This repository includes a test client script (`test_mcp_client.py`) that can be
 To run the test client:
 
 ```bash
-# Ensure you are in the jama_mcp_server directory
+# Ensure you are in the jama-mcp-server directory
 # This script automatically sets JAMA_MOCK_MODE=true for the server it launches
 uv run python test_mcp_client.py
 ```
@@ -100,10 +100,10 @@ Configure your MCP client (like Cline, RooCode, Claude Desktop) to launch this s
       "args": [
         "run",
         "python",
-        "server.py"
+        "jama_mcp/server.py"
       ],
       
-      "cwd": "/full/path_to/project_dir",
+      "cwd": "/path/to/your/clone/jama-mcp-server",
       "env": {
         "JAMA_URL": "https://your.jama.instance.com",
         "JAMA_CLIENT_ID": "your_client_id",

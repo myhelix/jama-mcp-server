@@ -18,7 +18,7 @@ dev = [
     "pytest-asyncio>=0.26.0",
 ]
 [tool.pytest.ini_options]
-# Add parent directory (project root) to pythonpath so pytest can find the jama_mcp_server package
+# Add parent directory (project root) to pythonpath so pytest can find the jama_mcp package
 # Also include current directory for relative imports within tests if needed
 pythonpath = [ ".", ".." ]
 asyncio_mode = "strict" # Explicitly set asyncio mode
