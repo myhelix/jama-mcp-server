@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 import logging
 
 from mcp.server.fastmcp import FastMCP, Context
+from auth import get_jama_credentials, CredentialsError
 
 # Configure basic logging FIRST
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - SERVER - %(levelname)s - %(message)s')
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 MOCK_MODE = os.environ.get("JAMA_MOCK_MODE", "false").lower() == "true"
 
 if MOCK_MODE:
-    from mock_client import MockJamaClient as JamaClient # Import the mock
+    from mock_client import MockJamaClient as JamaClient
     logger.info("Using MockJamaClient due to JAMA_MOCK_MODE=true")
 else:
     try:
@@ -27,8 +28,8 @@ else:
 @asynccontextmanager
 async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     """
-    Manages the JamaClient lifecycle, handling authentication based on environment variables.
-    Handles OAuth 2.0 authentication based on environment variables.
+    Manages the JamaClient lifecycle, retrieving credentials using get_jama_credentials
+    and instantiating the JamaClient.
     """
     if MOCK_MODE:
         logger.info("Jama Mock Mode enabled. Skipping real authentication.")
@@ -36,7 +37,7 @@ async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
             mock_client = JamaClient() # Instantiate the mock client
             yield {"jama_client": mock_client}
         except Exception as e:
-             logger.error(f"Failed to initialize MockJamaClient: {e}", exc_info=True)
+             logger.error(f"Failed to initialize MockJamaClient: {e}")
              raise
         finally:
              logger.info("Jama mock lifespan context manager exiting.")
@@ -44,31 +45,31 @@ async def jama_lifespan(server: FastMCP) -> AsyncIterator[dict]:
 
     # --- Real Authentication Logic (only runs if not MOCK_MODE) ---
     jama_url = os.environ.get("JAMA_URL")
-    client_id = os.environ.get("JAMA_CLIENT_ID")
-    client_secret = os.environ.get("JAMA_CLIENT_SECRET")
-
     if not jama_url:
         logger.error("JAMA_URL environment variable not set. Cannot connect to Jama.")
+        # Let the lifespan fail, preventing server start without URL
         raise ValueError("JAMA_URL environment variable is required.")
 
     jama_client = None
-
     try:
-        if client_id and client_secret:
-            logger.info(f"Attempting OAuth authentication to Jama at {jama_url}")
-            # Note: py-jama-rest-client uses client_id/secret directly in constructor for OAuth
-            jama_client = JamaClient(host_domain=jama_url, credentials=(client_id, client_secret), oauth=True)
-        else:
-            logger.error("Missing required Jama OAuth authentication environment variables. "
-                         "Set JAMA_CLIENT_ID and JAMA_CLIENT_SECRET.")
-            raise ValueError("Missing Jama OAuth credentials (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET) in environment variables.")
+        # Get credentials using the dedicated function
+        logger.info("Attempting to retrieve Jama credentials...")
+        client_id, client_secret = get_jama_credentials() # This handles AWS/Env Var logic and raises errors
+        logger.info("Successfully retrieved Jama credentials.")
 
-        logger.info(f"Successfully configured JamaClient using OAuth.")
+        # Instantiate the client
+        logger.info(f"Attempting OAuth authentication to Jama at {jama_url}")
+        jama_client = JamaClient(host_domain=jama_url, credentials=(client_id, client_secret), oauth=True)
+        logger.info(f"Successfully configured JamaClient.")
+
 
         yield {"jama_client": jama_client}
 
-    except Exception as e:
-        logger.error(f"Failed to initialize JamaClient: {e}", exc_info=True)
+    except CredentialsError as e: # Catch specific credential errors from auth.py
+        logger.error(f"Failed to obtain Jama credentials: {e}")
+        raise # Re-raise to prevent server start
+    except Exception as e: # Catch other potential errors (e.g., JamaClient init)
+        logger.error(f"Failed during JamaClient initialization or credential retrieval: {e}")
         # Re-raise the exception to prevent the server from starting incorrectly
         raise
     finally:

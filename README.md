@@ -18,7 +18,7 @@ This approach prioritizes security awareness and user control over convenience, 
 
 ## Prerequisites
 
-*   **Python:** Version 3.9 or higher recommended.
+*   **Python:** Version 3.12 or higher.
 *   **uv:** The Python package installer and virtual environment manager. ([Installation Guide](https://github.com/astral-sh/uv#installation))
 *   **Git:** For cloning the repository.
 
@@ -35,18 +35,27 @@ This approach prioritizes security awareness and user control over convenience, 
     ```bash
     uv sync
     ```
+    This installs required dependencies, including `boto3` if you plan to use AWS Parameter Store for credentials.
 
 ## Configuration
 
-The server requires environment variables to connect to your Jama Connect instance using **OAuth 2.0 only**.
+The server requires environment variables to connect to your Jama Connect instance using **OAuth 2.0**. Credentials can be provided directly or fetched securely from AWS Parameter Store.
 
-**Required Environment Variables:**
+**Authentication Methods (Priority Order):**
 
-*   `JAMA_URL`: The base URL of your Jama Connect instance (e.g., `https://yourcompany.jamacloud.com`).
-*   `JAMA_CLIENT_ID`: Your Jama API OAuth Client ID.
-*   `JAMA_CLIENT_SECRET`: Your Jama API OAuth Client Secret.
+1.  **AWS Parameter Store (Recommended for Security):**
+    *   `JAMA_URL` (Required): The base URL of your Jama Connect instance (e.g., `https://yourcompany.jamacloud.com`).
+    *   `JAMA_AWS_SECRET_PATH` (Required for this method): The full name/path of the secret in AWS Parameter Store containing your Jama credentials.
+        *   The secret value **must** be a JSON string with the following structure: `{"client_id": "YOUR_JAMA_CLIENT_ID", "client_secret": "YOUR_JAMA_CLIENT_SECRET"}`.
+    *   `JAMA_AWS_PROFILE` (Optional): The AWS named profile to use for authenticating to AWS. If not set, `boto3` will use its default credential resolution (e.g., environment variables, EC2 instance profile).
+    *   **Note:** Using this method requires the `boto3` library to be installed (`uv sync` handles this) and appropriate AWS permissions for the server's execution environment to access the specified Parameter Store secret.
 
-If these variables are not correctly set, the server will fail to start (unless Mock Mode is enabled).
+2.  **Direct Environment Variables (Fallback):**
+    *   `JAMA_URL` (Required): The base URL of your Jama Connect instance.
+    *   `JAMA_CLIENT_ID` (Required if not using AWS): Your Jama API OAuth Client ID.
+    *   `JAMA_CLIENT_SECRET` (Required if not using AWS): Your Jama API OAuth Client Secret.
+
+If `JAMA_AWS_SECRET_PATH` is set, it takes precedence. If it's not set, the server looks for `JAMA_CLIENT_ID` and `JAMA_CLIENT_SECRET`. If neither method provides the necessary credentials (and Mock Mode is off), the server will fail to start.
 
 **Mock Mode (Optional):**
 
@@ -58,7 +67,6 @@ For testing without connecting to a live Jama instance:
 
 Set these variables in the environment where the MCP client will launch the server process. This could be:
 *   Your terminal session (`export JAMA_URL=...`).
-*   A `.env` file loaded by your launch mechanism (requires additional tooling).
 *   Directly within the MCP client's server configuration (see below).
 
 ## Running the Server (Standalone)
@@ -106,6 +114,7 @@ Configure your MCP client (like Cline, RooCode, Claude Desktop) to launch this s
         "JAMA_URL": "https://your.jama.instance.com",
         "JAMA_CLIENT_ID": "your_client_id",
         "JAMA_CLIENT_SECRET": "your_client_secret",
+        "JAMA_AWS_SECRET_PATH": "/path/to/your/jama/secret",
         "JAMA_MOCK_MODE": "false"
       }
     }
@@ -131,6 +140,15 @@ Contributions and feedback are welcome! Please see the [CONTRIBUTING.md](CONTRIB
 
 ## Troubleshooting
 
-*   **Connection/Authentication Errors:** Verify `JAMA_URL`, `JAMA_CLIENT_ID`, `JAMA_CLIENT_SECRET` are correctly set in the server's execution environment. Check Jama permissions.
-*   **Tool Errors:** Check arguments. Consult server logs (stderr).
-*   **Mock Mode Not Working:** Ensure `JAMA_MOCK_MODE` is exactly `true`.
+*   **Connection/Authentication Errors:**
+    *   Verify `JAMA_URL` is correct.
+    *   If using direct env vars: Check `JAMA_CLIENT_ID`, `JAMA_CLIENT_SECRET`.
+    *   If using AWS Parameter Store:
+        *   Verify `JAMA_AWS_SECRET_PATH` is correct.
+        *   Ensure the server's execution environment has permissions to read the secret (check IAM roles/policies).
+        *   Verify the secret value is valid JSON: `{"client_id": "...", "client_secret": "..."}`.
+        *   Check if `boto3` is installed correctly (`uv sync`).
+        *   If using `JAMA_AWS_PROFILE`, ensure the profile exists and is configured correctly.
+    *   Check Jama API client permissions in Jama Connect itself.
+*   **Tool Errors:** Check arguments passed to the tool. Consult server logs (stderr) for more details.
+*   **Mock Mode Not Working:** Ensure `JAMA_MOCK_MODE` environment variable is set to exactly `true`.

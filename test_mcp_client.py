@@ -1,6 +1,5 @@
 import asyncio
 import os
-import sys
 import logging
 
 from mcp import ClientSession, StdioServerParameters, types
