@@ -15,17 +15,19 @@ async def main():
     """
     # Ensure the server runs in the correct uv environment and in mock mode
     # We use 'uv run python server.py' to ensure the server runs within its venv
-    server_command = ["uv", "run", "python", "jama_mcp/server.py"]
+    # Directly execute the python interpreter from the venv using -m
+    python_executable = ".venv/bin/python3" # Relative to cwd
+    server_args = ["-m", "jama_mcp_server.server"]
     server_env = {"JAMA_MOCK_MODE": "true"} # Ensure server starts in mock mode
 
-    logger.info(f"Starting server with command: {' '.join(server_command)}")
+    logger.info(f"Starting server with command: {python_executable} {' '.join(server_args)}")
     logger.info(f"Server environment: {server_env}")
 
     server_params = StdioServerParameters(
-        command=server_command[0], # The executable ('uv')
-        args=server_command[1:],   # The arguments ('run', 'python', 'server.py')
+        command=python_executable, # The python executable from .venv
+        args=server_args,          # The arguments ('-m', 'jama_mcp_server.server')
         env=server_env,
-        cwd=os.path.dirname(__file__) # Run server from the script's directory
+        cwd=os.path.dirname(__file__) # Run server from the script's directory (jama-mcp-server/)
     )
 
     try:

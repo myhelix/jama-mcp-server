@@ -10,6 +10,10 @@ dependencies = [
     "boto3",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [tool.uv.sources]
 py-jama-rest-client = { git = "https://github.com/jamasoftware-ps/py-jama-rest-client.git" }
 
@@ -18,8 +22,12 @@ dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=0.26.0",
 ]
+
 [tool.pytest.ini_options]
 # Add parent directory (project root) to pythonpath so pytest can find the jama_mcp package
 # Also include current directory for relative imports within tests if needed
 pythonpath = [ ".", ".." ]
 asyncio_mode = "strict" # Explicitly set asyncio mode
+
+[project.scripts]
+jama-mcp-server = "jama_mcp_server.server:main"

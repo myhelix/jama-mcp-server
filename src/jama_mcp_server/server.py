@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 import logging
 
 from mcp.server.fastmcp import FastMCP, Context
-from auth import get_jama_credentials, CredentialsError
+from .auth import get_jama_credentials, CredentialsError
 
 # Configure basic logging FIRST
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - SERVER - %(levelname)s - %(message)s')
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 MOCK_MODE = os.environ.get("JAMA_MOCK_MODE", "false").lower() == "true"
 
 if MOCK_MODE:
-    from mock_client import MockJamaClient as JamaClient
+    from .mock_client import MockJamaClient as JamaClient
     logger.info("Using MockJamaClient due to JAMA_MOCK_MODE=true")
 else:
     try:
@@ -497,15 +497,20 @@ async def test_jama_connection(ctx: Context) -> dict:
     return endpoints # Return the actual result or let exception indicate failure
 
 
-if __name__ == "__main__":
-    # This allows running the server directly with `python server.py`
-    # However, using `mcp dev server.py` or `uv run mcp dev server.py` is recommended for development
-    logger.info("Starting Jama MCP server directly (use 'mcp dev' for development features)...")
-    
+def main():
+    """Entry point for the jama-mcp-server script."""
+    logger.info("Starting Jama MCP server...")
+
     if not MOCK_MODE and not os.environ.get("JAMA_URL"):
+        logger.error("JAMA_URL environment variable is not set when not in MOCK_MODE.")
         print("\nERROR: JAMA_URL environment variable is not set.")
         print("Please set JAMA_URL and OAuth authentication variables (JAMA_CLIENT_ID, JAMA_CLIENT_SECRET),")
         print("or run in mock mode by setting JAMA_MOCK_MODE=true.")
-        exit(1)
+        exit(1) # Exit if essential config is missing for non-mock mode
 
-    mcp.run() # This uses uvicorn defaults
+    # Run the MCP server (uses uvicorn defaults)
+    mcp.run()
+
+if __name__ == "__main__":
+    # This allows running the server directly with `python -m jama_mcp_server.server`
+    main()
