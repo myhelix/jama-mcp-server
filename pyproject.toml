@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "mcp[cli]>=1.6.0",
-    "py-jama-rest-client",
+    "py-jama-rest-client", # Keep the name here
     "boto3",
 ]
 
@@ -14,8 +14,13 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# Use tool.uv.sources to point to the py-jama-rest-client dependency
 [tool.uv.sources]
 py-jama-rest-client = { git = "https://github.com/jamasoftware-ps/py-jama-rest-client.git" }
+
+# Alternatively, use the below source after cloning the above jama repo locally
+# py-jama-rest-client = { path = "./py-jama-rest-client", editable = true }
+
 
 [dependency-groups]
 dev = [

@@ -18,11 +18,47 @@ This approach prioritizes security awareness and user control over convenience, 
 
 ## Prerequisites
 
+### Building From Source
+
 *   **Python:** Version 3.12 or higher.
 *   **uv:** The Python package installer and virtual environment manager. ([Installation Guide](https://github.com/astral-sh/uv#installation))
 *   **Git:** For cloning the repository.
+*   **Docker** For running with docker
 
 ## Setup
+
+### Docker
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/t-j-thomas/jama-mcp-server.git
+    cd jama-mcp-server
+    ```
+
+2.  **Docker Build:**
+    ```bash
+    sudo docker build -t jama-mcp-server .
+    ```
+    This will build the docker image using the project's pyproject.tonl & uv.lock configrations
+
+3. **For Build issues due to Certificates for the Jama Rest Client Repo:**
+    
+    If you see an error like `certificate verification failed: CAFile`, you can optionally
+    clone the https://github.com/jamasoftware-ps/py-jama-rest-client.git repo into this directory, and uncomment
+
+    `# py-jama-rest-client = { path = "./py-jama-rest-client", editable = true }`
+
+    from `pyproject.toml` file and comment out
+
+    `py-jama-rest-client = { git = "https://github.com/jamasoftware-ps/py-jama-rest-client.git" }`.
+
+    Then,
+    ```bash
+    uv sync
+    sudo docker build -t jama-mcp-server .
+    ```
+
+### Building From Source
 
 1.  **Clone the Repository:**
     ```bash
@@ -49,7 +85,7 @@ The server requires environment variables to connect to your Jama Connect instan
     *   `JAMA_CLIENT_SECRET` (Required for this method): Your Jama API OAuth Client Secret.
     *   If both `JAMA_CLIENT_ID` and `JAMA_CLIENT_SECRET` are set, they will be used directly, and the AWS Parameter Store configuration will be ignored.
 
-2.  **AWS Parameter Store (Recommended for Security):**
+2.  **AWS Parameter Store (Not Supported for Docker):**
     *   This method is used **only if** `JAMA_CLIENT_ID` and `JAMA_CLIENT_SECRET` are *not* both set directly in the environment.
     *   `JAMA_URL` (Required): The base URL of your Jama Connect instance.
     *   `JAMA_AWS_SECRET_PATH` (Required for this method): The full name/path of the secret in AWS Parameter Store containing your Jama credentials.
@@ -77,7 +113,7 @@ You can run the server directly for basic checks using `uv` (ensure environment 
 
 ```bash
 # Ensure you are in the jama-mcp-server directory
-uv run python jama_mcp/server.py
+uv run python -m jama_mcp_server.server
 ```
 ## Testing with `test_mcp_client.py`
 
@@ -98,7 +134,28 @@ The script will start the server, call various predefined tools (including succe
 
 Configure your MCP client (like Cline, RooCode, Claude Desktop) to launch this server via its settings (e.g., `mcp_settings.json`).
 
-**Example Configuration (`mcp_settings.json`):**
+**Example Docker Configuration (`mcp_settings.json`):**
+
+```json
+{
+  "mcpServers": {
+    "jama-mcp": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i",
+        "-e", "JAMA_URL", "-e", "JAMA_CLIENT_ID", "-e", "JAMA_CLIENT_SECRET", "-e", "JAMA_MOCK_MODE",
+        "jama-mcp-server"
+      ],
+      "env": {
+        "JAMA_URL": "https://your-jama-instance.com",
+        "JAMA_CLIENT_ID": "your-client-id",
+        "JAMA_CLIENT_SECRET": ""
+      }
+    },
+  }
+}
+```
+
+**Example UV Configuration (`mcp_settings.json`):**
 
 ```json
 {
@@ -108,7 +165,8 @@ Configure your MCP client (like Cline, RooCode, Claude Desktop) to launch this s
       "args": [
         "run",
         "python",
-        "jama_mcp/server.py"
+        "-m",
+        "jama_mcp_server.server"
       ],
       
       "cwd": "/path/to/your/clone/jama-mcp-server",
