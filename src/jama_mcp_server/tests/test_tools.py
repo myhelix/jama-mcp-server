@@ -2,10 +2,16 @@ import pytest
 from unittest.mock import MagicMock
 
 # Import the tool functions we want to test
-from jama_mcp.server import (
+from jama_mcp_server.server import (
     get_jama_projects,
     get_jama_item,
-    get_jama_project_items
+    get_jama_project_items,
+    create_item,
+    create_tag,
+    add_jama_item_tag,
+    update_item,
+    create_project,
+    create_relationship,
 )
 
 # --- Test Fixtures ---
@@ -154,3 +160,132 @@ async def test_get_jama_project_items_error(mock_context, mock_jama_client):
 
     # Assert
     mock_jama_client.get_items.assert_called_once_with(project_id=project_id_to_test)
+
+
+# --- Tool Tests for create_item ---
+@pytest.mark.asyncio
+async def test_create_item_success(mock_context, mock_jama_client):
+    """Test create_item returns data from mock client."""
+    # Arrange
+    mock_item_data = {"id": 999, "name": "New Item"}
+    mock_jama_client.post_item.return_value = 999
+    mock_jama_client.get_item.return_value = mock_item_data
+
+    # Act
+    result = await create_item(
+        project=1,
+        item_type_id=10,
+        child_item_type_id=10,
+        location={"project": 1},
+        fields={"name": "New Item", "description": "A new test item"},
+        ctx=mock_context
+    )
+
+    # Assert
+    assert result == mock_item_data
+    mock_jama_client.post_item.assert_called_once()
+
+# --- Tool Tests for create_tag ---
+
+@pytest.mark.asyncio
+async def test_create_tag_success(mock_context, mock_jama_client):
+    """Test create_tag returns data from mock client."""
+    # Arrange
+    mock_tag_id = 999
+    mock_jama_client.post_tag.return_value = mock_tag_id
+
+    # Act
+    result = await create_tag(
+        name="New Tag",
+        project=1,
+        ctx=mock_context
+    )
+
+    # Assert
+    assert result == mock_tag_id
+    mock_jama_client.post_tag.assert_called_once()
+
+# --- Tool Tests for add_jama_item_tag ---
+
+@pytest.mark.asyncio
+async def test_add_jama_item_tag_success(mock_context, mock_jama_client):
+    """Test add_jama_item_tag returns data from mock client."""
+    # Arrange
+    mock_response = 201
+    mock_jama_client.post_item_tag.return_value = mock_response
+
+    # Act
+    result = await add_jama_item_tag(
+        item_id=123,
+        tag_id=301,
+        ctx=mock_context
+    )
+
+    # Assert
+    assert result == mock_response
+    mock_jama_client.post_item_tag.assert_called_once()
+
+# --- Tool Tests for update_item ---
+
+@pytest.mark.asyncio
+async def test_update_item_success(mock_context, mock_jama_client):
+    """Test update_item returns data from mock client."""
+    # Arrange
+    mock_response = {"status": "success"}
+    mock_jama_client.put_item.return_value = mock_response
+
+    # Act
+    result = await update_item(
+        project=1,
+        item_id=123,
+        item_type_id=10,
+        child_item_type_id=10,
+        location={"project": 1},
+        fields={"name": "Updated Name"},
+        ctx=mock_context
+    )
+
+    # Assert
+    assert result == mock_response
+    mock_jama_client.put_item.assert_called_once()
+
+# --- Tool Tests for create_project ---
+
+@pytest.mark.asyncio
+async def test_create_project_success(mock_context, mock_jama_client):
+    """Test create_project returns data from mock client."""
+    # Arrange
+    mock_project_data = {"id": 777, "name": "New Project"}
+    mock_jama_client.post_project.return_value = mock_project_data
+
+    # Act
+    result = await create_project(
+        name="New Project",
+        project_key="NP",
+        item_type_id=10,
+        ctx=mock_context
+    )
+
+    # Assert
+    assert result == mock_project_data
+    mock_jama_client.post_project.assert_called_once()
+
+# --- Tool Tests for create_relationship ---
+
+@pytest.mark.asyncio
+async def test_create_relationship_success(mock_context, mock_jama_client):
+    """Test create_relationship returns data from mock client."""
+    # Arrange
+    mock_relationship_data = {"id": 666, "fromItem": 123, "toItem": 456}
+    mock_jama_client.post_relationship.return_value = mock_relationship_data
+
+    # Act
+    result = await create_relationship(
+        from_item_id=123,
+        to_item_id=456,
+        ctx=mock_context
+    )
+
+    # Assert
+    assert result == mock_relationship_data
+    mock_jama_client.post_relationship.assert_called_once()
