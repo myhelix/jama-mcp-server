@@ -156,5 +156,29 @@ class MockJamaClient:
             return [{"id": 601, "name": "Run 1", "status": "PASSED"},
                     {"id": 602, "name": "Run 2", "status": "FAILED"}]
         return []
+    
+    def post_item(self, project_id: int, item_type_id: int, name: str, description: str, parent_id: int = None, item_fields: dict = None):
+        logger.info(f"MOCK: post_item(project_id={project_id}, name='{name}') called")
+        return {"id": 999, "name": name, "description": description}
+
+    def post_tag(self, name: str, project: int):
+        logger.info(f"MOCK: post_tag(name='{name}', project={project}) called")
+        return 999
+
+    def post_item_tag(self, item_id: int, tag_id: int):
+        logger.info(f"MOCK: post_item_tag(item_id={item_id}, tag_id={tag_id}) called")
+        return 201
+
+    def put_item(self, item_id: int, item: dict):
+        logger.info(f"MOCK: put_item(item_id={item_id}) called")
+        return {"status": "success"}
+
+    def post_project(self, name: str, project_key: str, item_type_id: int):
+        logger.info(f"MOCK: post_project(name='{name}', key='{project_key}') called")
+        return {"id": 777, "name": name, "projectKey": project_key}
+
+    def post_relationship(self, from_item_id: int, to_item_id: int):
+        logger.info(f"MOCK: post_relationship(from={from_item_id}, to={to_item_id}) called")
+        return {"id": 666, "fromItem": from_item_id, "toItem": to_item_id}
 
     # Add mock methods for other functions as needed

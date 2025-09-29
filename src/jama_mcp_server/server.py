@@ -1,6 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from typing import Optional, Dict, Any
 import logging
 
 from mcp.server.fastmcp import FastMCP, Context
@@ -471,7 +472,145 @@ async def get_jama_test_runs(test_cycle_id: str, ctx: Context) -> list[dict]:
     runs = jama_client.get_testruns(test_cycle_id=test_cycle_id)
     return runs if runs else []
 
+@mcp.tool()
+async def create_item(
+    project: int,
+    item_type_id: int,
+    child_item_type_id: int,
+    location: dict,
+    fields: dict,
+    ctx: Context,
+) -> dict:
+    """
+    Creates a new item in Jama Connect.
+    Args:
+        project: The ID of the project to create the item in.
+        item_type_id: The ID of the item type for the new item.
+        child_item_type_id: The ID of the child item type for the new item.
+        location: A dictionary with parent ID, e.g. {"item": 123}
+        fields: A dictionary of fields for the new item.
+    Returns:
+        A dictionary representing the newly created item.
+    """
+    logger.info(f"Executing create_item tool for project: {project}")
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    item_id = jama_client.post_item(
+        project=project,
+        item_type_id=item_type_id,
+        child_item_type_id=child_item_type_id,
+        location=location,
+        fields=fields,
+    )
+    new_item = await get_jama_item(item_id=str(item_id), ctx=ctx)
+    return new_item
 
+@mcp.tool()
+async def create_tag(name: str, project: int, ctx: Context) -> int:
+    """
+    Create a new tag in the project with the specified ID
+    Args:
+        name: The display name for the tag
+        project: The project to create the new tag in
+    Returns: The integer API ID fr the newly created Tag.
+    """
+    logger.info(f"Executing create_tag tool for project: {project}")
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    tag_id = jama_client.post_tag(name=name, project=project)
+    return tag_id
+
+
+@mcp.tool()
+async def add_jama_item_tag(item_id: int, tag_id: int, ctx: Context) -> int:
+    """
+    Add an existing tag to the item with the specified ID
+    Args:
+        item_id: The API ID of the item to add a tag.
+        tag_id: The API ID of the tag to add to the item.
+    Returns: 201 if successful
+    """
+    logger.info(f"Executing add_jama_item_tag tool for item_id: {item_id}")
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    status_code = jama_client.post_item_tag(item_id=item_id, tag_id=tag_id)
+    return status_code
+
+
+@mcp.tool()
+async def update_item(
+    project: int,
+    item_id: int,
+    item_type_id: int,
+    child_item_type_id: int,
+    location: dict,
+    fields: dict,
+    ctx: Context,
+) -> int:
+    """
+    This method will PUT a new item to Jama Connect.
+    :param project integer representing the project to which this item is to be posted
+    :param item_id integer representing the item which is to be updated
+    :param item_type_id integer ID of an Item Type.
+    :param child_item_type_id integer ID of an Item Type.
+    :param location dictionary  with a key of 'item' or 'project' and an value with the ID of the parent
+    :param fields dictionary item field data.
+    :return integer ID of the successfully posted item or None if there was an error."""
+    logger.info(f"Executing update_item tool for item_id: {item_id}")
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    response = jama_client.put_item(
+        project=project,
+        item_id=item_id,
+        item_type_id=item_type_id,
+        child_item_type_id=child_item_type_id,
+        location=location,
+        fields=fields,
+    )
+    return response
+
+@mcp.tool()
+async def create_project(
+    name: str,
+    project_key: str,
+    item_type_id: int,
+    ctx: Context,
+) -> dict:
+    """
+    Creates a new project in Jama Connect.
+    Args:
+        name: The name of the project.
+        project_key: The project key.
+        item_type_id: The ID of the item type to use for the project.
+    Returns:
+        A dictionary representing the newly created project.
+    """
+    logger.info(f"Executing create_project tool for project: {name}")
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    project = jama_client.post_project(
+        name=name,
+        project_key=project_key,
+        item_type_id=item_type_id,
+    )
+    return project
+
+@mcp.tool()
+async def create_relationship(
+    from_item_id: int,
+    to_item_id: int,
+    ctx: Context,
+) -> dict:
+    """
+    Creates a new relationship between two items in Jama Connect.
+    Args:
+        from_item_id: The ID of the item to create the relationship from.
+        to_item_id: The ID of the item to create the relationship to.
+    Returns:
+        A dictionary representing the newly created relationship.
+    """
+    logger.info(f"Executing create_relationship tool for items: {from_item_id} -> {to_item_id}")
+    jama_client: JamaClient = ctx.request_context.lifespan_context["jama_client"]
+    relationship = jama_client.post_relationship(
+        from_item=from_item_id,
+        to_item=to_item_id,
+    )
+    return relationship
 
 @mcp.tool()
 async def test_jama_connection(ctx: Context) -> dict:
